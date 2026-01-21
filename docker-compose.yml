@@ -1,0 +1,45 @@
+version: "3.9"
+
+services:
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_DATABASE: app
+      MYSQL_USER: app
+      MYSQL_PASSWORD: app
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./infra/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+
+  backend:
+    build: ./apps/backend
+    env_file: .env
+    depends_on: [mysql, redis]
+    ports:
+      - "8000:8000"
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+
+  worker:
+    build: ./apps/backend
+    env_file: .env
+    depends_on: [mysql, redis]
+    command: ["celery", "-A", "app.celery_app:celery", "worker", "--loglevel=INFO", "-Q", "default"]
+
+  frontend:
+    build: ./apps/frontend
+    env_file: ./apps/frontend/.env
+    depends_on: [backend]
+    ports:
+      - "5173:5173"
+    command: ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173"]
+
+volumes:
+  mysql_data:

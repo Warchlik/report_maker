@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Generator
 
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.orm import DeclarativeBase, sessionmaker, Session
 
 from app.core.config import settings
 
@@ -19,6 +19,10 @@ SessionLocal = sessionmaker(
     autocommit=False,
     expire_on_commit=False,
 )
+
+
+class Base(DeclarativeBase):
+    pass
 
 
 def db() -> Generator[Session, None, None]:

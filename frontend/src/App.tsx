@@ -1,35 +1,36 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { HashRouter, Outlet, Route, Routes } from "react-router-dom";
+import Sidebar from "./components/SideBar";
+import UploadPage from "./pages/UploadPage";
+import HistoryPage from "./pages/HisoryPage";
+import LoginPage from "./pages/LoginPage";
+import RegisterPage from "./pages/RegisterPage";
 
-function App() {
-  const [count, setCount] = useState(0)
+const Layout = () => {
+  return (
+    <div className="flex min-h-screen w-full bg-background text-foreground">
+      <Sidebar />
+      <main className="ml-[60px] min-h-screen w-full transition-all duration-300">
+        <Outlet />
+      </main>
+    </div>
+  );
+};
 
+// TODO: do poprawy wygląd oraz informacje, podpiąć endpointy po zrobieniu backendu
+export default function App() {
   return (
     <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
+      <HashRouter>
+        <Routes>
+          <Route element={<Layout />}>
+            <Route path="/" element={<UploadPage />} />
+            <Route path="/history" element={<HistoryPage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+          </Route>
+        </Routes>
+      </HashRouter>
     </>
-  )
+  );
 }
 
-export default App

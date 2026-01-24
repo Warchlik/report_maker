@@ -1,4 +1,5 @@
 version: "3.9"
+# TODO: do poprawy cały kodnig oraz dodanie docker file 
 
 services:
   mysql:
@@ -20,7 +21,7 @@ services:
       - "6379:6379"
 
   backend:
-    build: ./apps/backend
+    build: ./backend
     env_file: .env
     depends_on: [mysql, redis]
     ports:
@@ -28,18 +29,51 @@ services:
     command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
 
   worker:
-    build: ./apps/backend
+    build: ./backend
     env_file: .env
     depends_on: [mysql, redis]
     command: ["celery", "-A", "app.celery_app:celery", "worker", "--loglevel=INFO", "-Q", "default"]
 
-  frontend:
-    build: ./apps/frontend
-    env_file: ./apps/frontend/.env
-    depends_on: [backend]
+  # frontend:
+  #   build: ./frontend
+  #   env_file: ./apps/frontend/.env
+  #   depends_on: [backend]
+  #   ports:
+  #     - "5173:5173"
+  #   command: ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173"]
+
+  node:
+    container_name: ${NODE_NAME}
+    build:
+      context: .
+      dockerfile: ./docker/Dockerfile
+      target: node
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - shared-dist:/app/dist
+    networks:
+      - reports-network
+
+  nginx:
+    container_name: ${NGINX_NAME}
+    build:
+      context: .
+      dockerfile: ./docker/Dockerfile
+      target: nginx
     ports:
-      - "5173:5173"
-    command: ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173"]
+      - "${NGINX_PORT}:${NGINX_PORT}"
+    volumes:
+      - shared-dist:/usr/share/nginx/html
+    depends_on:
+      - node
+    networks:
+      - reports-network
+
+networks:
+  reports-network:
+    name: reports-network
+    driver: bridge
 
 volumes:
   mysql_data:

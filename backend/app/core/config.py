@@ -1,6 +1,11 @@
 from __future__ import annotations
+from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+APP_DIR = Path(__file__).resolve().parent.parent
+STORAGE_DIR = APP_DIR / "storage"
+REPORTS_DIR = STORAGE_DIR / "reports"
 
 
 class Settings(BaseSettings):

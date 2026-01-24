@@ -1,0 +1,1 @@
+# TODO: do zrobienia makefile

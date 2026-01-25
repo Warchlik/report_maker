@@ -17,20 +17,16 @@ class Settings(BaseSettings):
 
     ENV: str = "dev"
 
-    # DB / Redis
-    DATABASE_URL: str = ""
-    REDIS_URL: str = "redis://localhost:6379/0"
+    DATABASE_URL: str = "mysql+pymysql://maker:root@mysql:3306/report_maker"
+    REDIS_URL: str = "redis://redis:6379/0"
 
-    # Celery
-    CELERY_BROKER_URL: str = ""
-    CELERY_RESULT_BACKEND: str = ""
+    CELERY_BROKER_URL: str = "redis://redis:6379/0"
+    CELERY_RESULT_BACKEND: str = "redis://redis:6379/0"
 
-    # Sentry
     SENTRY_DSN_BACKEND: str | None = None
     SENTRY_ENV: str = "dev"
     SENTRY_TRACES_SAMPLE_RATE: float = 0.1
 
-    # Front (CORS)
     CORS_ORIGINS: str = "http://localhost:5173"
 
     FREE_JOBS_PER_DAY: int = 5

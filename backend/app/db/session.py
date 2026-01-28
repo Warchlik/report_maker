@@ -1,19 +1,19 @@
 from __future__ import annotations
 
-from typing import Generator
+from typing import AsyncGenerator
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import DeclarativeBase, sessionmaker, Session
+from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.core.config import settings
 
-engine = create_engine(
+engine = create_async_engine(
     settings.DATABASE_URL,
     pool_pre_ping=True,
     pool_recycle=3600,
 )
 
-SessionLocal = sessionmaker(
+SessionLocal = async_sessionmaker(
     bind=engine,
     autoflush=False,
     autocommit=False,
@@ -25,9 +25,6 @@ class Base(DeclarativeBase):
     pass
 
 
-def db() -> Generator[Session, None, None]:
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+async def db() -> AsyncGenerator[AsyncSession, None]:
+    async with SessionLocal() as connection:
+        yield connection

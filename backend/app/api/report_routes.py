@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import Any, Optional
 from fastapi import APIRouter, Depends, File, HTTPException, Header, UploadFile
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
 from app.db.models import Report, ReportStatus
@@ -51,7 +52,7 @@ async def upload_job(
     db.commit()
     db.refresh(report)
 
-    # TODO: -> add calary or background task
+    # TODO: -> add calary or background task | background task would by better in my situation
 
     return {"id": report.id, "filename": report.input_filename, "owner_key": owner_key}
 
@@ -59,14 +60,16 @@ async def upload_job(
 @reports.get("/reports")
 async def list_jobs(
     x_client_id: str | None = Header(default=None, alias="X-Client-Id"),
-    db: Session = Depends(db),
+    db: AsyncSession = Depends(db),
 ) -> list[dict[str, Any]]:
-    owner_key = _request_client_id(x_client_id)
+    owner_key = await _request_client_id(x_client_id)
 
-    reports = db.scalars(
-        select(Report)
-        .where(Report.user_id == owner_key)
-        .order_by(Report.created_at.desc())
+    reports = (
+        await db.scalars(
+            select(Report)
+            .where(Report.user_id == owner_key)
+            .order_by(Report.created_at.desc())
+        )
     ).all()
 
     return [
@@ -82,15 +85,17 @@ async def list_jobs(
 
 
 @reports.get("/report/{report_id}")
-def get_job(
+async def get_report(
     report_id: int,
     x_client_id: str | None = Header(default=None, alias="X-Client-Id"),
-    db: Session = Depends(db),
+    db: AsyncSession = Depends(db),
 ):
-    owner_key = _request_client_id(x_client_id)
+    owner_key = await _request_client_id(x_client_id)
 
-    report: Optional[Report] = db.scalars(
-        select(Report).where(Report.id == report_id, Report.user_id == owner_key)
+    report: Optional[Report] = (
+        await db.scalars(
+            select(Report).where(Report.id == report_id, Report.user_id == owner_key)
+        )
     ).one_or_none()
 
     if not report:

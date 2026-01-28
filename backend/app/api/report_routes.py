@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any
+from typing import Any, Optional
 from fastapi import APIRouter, Depends, File, HTTPException, Header, UploadFile
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -9,10 +9,10 @@ from app.db.session import db
 from app.utils.helper import save_file
 
 
-jobs = APIRouter()
+reports = APIRouter()
 
 
-def _request_client_id(x_client_id: str | None) -> str:
+async def _request_client_id(x_client_id: str | None) -> str:
     if not x_client_id:
         raise HTTPException(status_code=400, detail="None value in client_id")
     if len(x_client_id) > 64:
@@ -20,13 +20,13 @@ def _request_client_id(x_client_id: str | None) -> str:
     return x_client_id
 
 
-@jobs.post("/reports/upload")
+@reports.post("/reports/upload")
 async def upload_job(
     file: UploadFile = File(...),
     x_client_id: str | None = Header(default=None, alias="X-Client-Id"),
     db: Session = Depends(db),
 ) -> dict[str, Any]:
-    owner_key: str = _request_client_id(x_client_id)
+    owner_key: str = await _request_client_id(x_client_id)
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     input_filename = f"{timestamp}_input.csv"
@@ -51,27 +51,23 @@ async def upload_job(
     db.commit()
     db.refresh(report)
 
-    # todo -> add calary
+    # TODO: -> add calary or background task
 
     return {"id": report.id, "filename": report.input_filename, "owner_key": owner_key}
 
 
-@jobs.get("/reports")
+@reports.get("/reports")
 async def list_jobs(
     x_client_id: str | None = Header(default=None, alias="X-Client-Id"),
     db: Session = Depends(db),
 ) -> list[dict[str, Any]]:
     owner_key = _request_client_id(x_client_id)
 
-    reports = (
-        db.execute(
-            select(Report)
-            .where(Report.user_id == owner_key)
-            .order_by(Report.created_at.desc())
-        )
-        .scalars()
-        .all()
-    )
+    reports = db.scalars(
+        select(Report)
+        .where(Report.user_id == owner_key)
+        .order_by(Report.created_at.desc())
+    ).all()
 
     return [
         {
@@ -85,7 +81,7 @@ async def list_jobs(
     ]
 
 
-@jobs.get("/report/{report_id}")
+@reports.get("/report/{report_id}")
 def get_job(
     report_id: int,
     x_client_id: str | None = Header(default=None, alias="X-Client-Id"),
@@ -93,9 +89,9 @@ def get_job(
 ):
     owner_key = _request_client_id(x_client_id)
 
-    report = db.execute(
+    report: Optional[Report] = db.scalars(
         select(Report).where(Report.id == report_id, Report.user_id == owner_key)
-    ).scalar_one_or_none()
+    ).one_or_none()
 
     if not report:
         raise HTTPException(status_code=400, detail="Can not find jobs witch this id")

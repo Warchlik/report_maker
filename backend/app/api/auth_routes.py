@@ -1,16 +1,17 @@
 from datetime import timedelta
 from datetime import datetime
 from typing import Optional
-from fastapi import APIRouter, Body, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordRequestForm
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi.security import OAuth2PasswordRequestForm, http
 from pydantic import BaseModel, EmailStr, Field
-from sqlalchemy import select
+from sqlalchemy import select, true
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.status import HTTP_400_BAD_REQUEST
 
 from app.db.session import db
 from app.utils.validator import (
     create_access_token,
-    current_user,
+    current_user_cookie,
     hash_value,
     validate_hashed_value,
 )
@@ -21,8 +22,8 @@ auth = APIRouter()
 
 
 class RegisterRequest(BaseModel):
-    firstname: str
-    lastname: str
+    first_name: str
+    last_name: str
     email: EmailStr
     password: str = Field(min_length=8, max_length=72)
 
@@ -40,8 +41,8 @@ async def register(
 
     password_hash = hash_value(user_data.password)
     user = User(
-        firstname=user_data.firstname,
-        lastname=user_data.lastname,
+        first_name=user_data.first_name,
+        last_name=user_data.last_name,
         email=user_data.email,
         password=password_hash,
     )
@@ -59,7 +60,9 @@ async def register(
 
 @auth.post("/login")
 async def login(
-    form: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = Depends(db)
+    response: Response,
+    form: OAuth2PasswordRequestForm = Depends(),
+    db: AsyncSession = Depends(db),
 ):
     login_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid login credentials"
@@ -83,11 +86,35 @@ async def login(
         {"user_id": user.id, "email": user.email}, timedelta(minutes=30)
     )
 
+    response.set_cookie(
+        key="access_token",
+        value=f"{token}",
+        httponly=True,
+        secure=False,
+        samesite="lax",
+        max_age=30 * 60,
+    )
+
     return {"access_token": token, "token_type": "Bearer"}
 
 
+@auth.get("/logout")
+async def logout(
+    response: Response, user: Optional[User] = Depends(current_user_cookie)
+):
+    if not user:
+        raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail="not loged user")
+    try:
+        response.delete_cookie("access_token")
+        return {"logout": True}
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Somting wrong, try again"
+        )
+
+
 class UserResposne(BaseModel):
-    id: str
+    id: int
     email: str
     created_at: datetime
 
@@ -96,5 +123,5 @@ class UserResposne(BaseModel):
 
 
 @auth.get("/me", response_model=UserResposne)
-async def me(user: User | None = Depends(current_user)):
+async def me(user: User | None = Depends(current_user_cookie)):
     return user

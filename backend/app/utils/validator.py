@@ -1,5 +1,4 @@
-from fastapi import Depends, HTTPException
-from passlib.context import CryptContext
+from fastapi import Depends, HTTPException, Request
 from datetime import datetime
 from typing import Optional
 from datetime import timedelta
@@ -7,6 +6,7 @@ from jose import JWTError, jwt
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi.security import OAuth2PasswordBearer
+import bcrypt
 
 from app.db.models import User
 from app.db.session import db
@@ -15,16 +15,16 @@ SECRET_KEY = "HpoPSC9U2JlHlX5kxTcWgKpeysVYAEjGmhk2IxcDa4q"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_TIME = 30
 
-context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-oauth2 = OAuth2PasswordBearer(tokenUrl="token")
+oauth2 = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 
 def hash_value(value: str) -> str:
-    return context.hash(value)
+    hashed_value = bcrypt.hashpw(value.encode(), salt=bcrypt.gensalt(rounds=13))
+    return hashed_value.decode()
 
 
 def validate_hashed_value(value: str, value_hash: str) -> bool:
-    return context.verify(secret=value, hash=value_hash)
+    return bcrypt.checkpw(password=value.encode(), hashed_password=value_hash.encode())
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
@@ -62,3 +62,28 @@ async def current_user(token: str = Depends(oauth2), db: AsyncSession = Depends(
         raise exception
 
     return usr
+
+
+async def current_user_cookie(request: Request, db: AsyncSession = Depends(db)):
+    exception = HTTPException(
+        status_code=400,
+        detail="Invalid auth data",
+        headers={"Authentication": "Bearer"},
+    )
+
+    cookie_token: Optional[str] = request.cookies.get("access_token")
+
+    if not cookie_token:
+        raise exception
+
+    try:
+        payload = jwt.decode(cookie_token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id: Optional[int] = payload.get("user_id")
+        if user_id is None:
+            raise exception
+
+        user = await db.scalar(select(User).where(User.id == user_id))
+    except JWTError:
+        raise exception
+
+    return user

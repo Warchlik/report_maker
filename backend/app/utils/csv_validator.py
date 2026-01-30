@@ -39,6 +39,6 @@ def _map_columns(data_frame: pd.DataFrame):
 
     final_df = data_frame[list[existing_columns]]
 
-    report_data = final_df.to_dict(orient="records")
+    # report_data = final_df.to_dict(orient="records")
 
-    return report_data
+    return None

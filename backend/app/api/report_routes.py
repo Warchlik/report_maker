@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Any, Optional
-from fastapi import APIRouter, Depends, File, HTTPException, Header, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Header, UploadFile, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
@@ -48,9 +48,12 @@ async def upload_job(
         raise HTTPException(status_code=400, detail="Error witch procesing file")
 
     report = Report(input_filename=input_filename, status=ReportStatus.ASSIGNED.value)
-    db.add(report)
-    db.commit()
-    db.refresh(report)
+    try:
+        db.add(report)
+        db.commit()
+        db.refresh(report)
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST)
 
     # TODO: -> add calary or background task | background task would by better in my situation
 

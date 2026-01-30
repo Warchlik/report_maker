@@ -17,7 +17,8 @@ class Settings(BaseSettings):
 
     ENV: str = "dev"
 
-    DATABASE_URL: str = "mysql+pymysql://maker:root@mysql:3306/report_maker"
+    # DATABASE_URL: str = "mysql+pymysql://maker:root@mysql:3306/report_maker"
+    DATABASE_URL: str = "mysql+aiomysql://root:root@localhost:3306/report_maker"
     REDIS_URL: str = "redis://redis:6379/0"
 
     CELERY_BROKER_URL: str = "redis://redis:6379/0"

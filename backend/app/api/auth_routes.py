@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import Optional
 from fastapi import APIRouter, Body, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
+from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -19,25 +20,39 @@ from app.db.models import User
 auth = APIRouter()
 
 
+class RegisterRequest(BaseModel):
+    firstname: str
+    lastname: str
+    email: EmailStr
+    password: str = Field(min_length=8, max_length=72)
+
+
 @auth.post("/register")
 async def register(
-    firstname: str = Body(default=None, alias="firstname"),
-    lastname: str = Body(default=None, alias="lastname"),
-    email: str = Body(default=None, alias="email"),
-    password: str = Body(default=None, alias="password"),
+    user_data: RegisterRequest,
     db: AsyncSession = Depends(db),
 ):
-    if len(password) < 8:
-        raise HTTPException(status_code=400, detail="Invalid password validation")
+    existing_user = await db.scalar(select(User).where(User.email == user_data.email))
+    if existing_user:
+        raise HTTPException(
+            status_code=400, detail="User with this credentials already exist"
+        )
 
-    password_hash = hash_value(password)
+    password_hash = hash_value(user_data.password)
     user = User(
-        firstname=firstname, lastname=lastname, email=email, password=password_hash
+        firstname=user_data.firstname,
+        lastname=user_data.lastname,
+        email=user_data.email,
+        password=password_hash,
     )
 
-    db.add(user)
-    await db.commit()
-    await db.refresh(user)
+    try:
+        db.add(user)
+        await db.commit()
+        await db.refresh(user)
+    except Exception:
+        await db.rollback()
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     return {"status": 200}
 
@@ -71,10 +86,13 @@ async def login(
     return {"access_token": token, "token_type": "Bearer"}
 
 
-class UserResposne:
+class UserResposne(BaseModel):
     id: str
     email: str
     created_at: datetime
+
+    class Config:
+        from_atributes = True
 
 
 @auth.get("/me", response_model=UserResposne)

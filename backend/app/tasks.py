@@ -1,49 +1,33 @@
 from datetime import datetime
 from sqlalchemy import select, update
-from sqlalchemy.orm import Session
-from app.celery_app import celery
+from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.models import Report, ReportStatus
 from app.db.session import SessionLocal
 
 
-@celery.task(
-    name="app.tasks.process_csv_job",
-    bind=True,
-    autoretry_for=(Exception,),
-    retry_backoff=True,
-    retry_jitter=True,
-    max_retries=3,
-)
-def process_report_generation(self, report_id: int):
-    db: Session = SessionLocal()
+async def process_report_generation(report_id: int):
+    db: AsyncSession = SessionLocal()
 
     try:
-        # db.execute(select(Report.input_filename).where(Report.id == report_id))
-        # db.execute(
-        #     update(Report)
-        #     .where(Report.id == report_id)
-        #     .values(status=ReportStatus.PENDING.value)
-        # )
-
-        report: Report | None = db.execute(
+        report: Report | None = await db.scalar(
             select(Report).where(Report.id == report_id)
-        ).scalar_one_or_none()
+        )
 
         if not report:
             raise
 
         report.status = ReportStatus.PENDING.value
-        db.commit()
+        await db.commit()
 
         # todo -> wywołanie funkjci do robienia raportu
 
-        db.execute(
+        await db.execute(
             update(Report)
             .where(Report.id == report_id)
             .values(status=ReportStatus.COMPLETE.value, finished_at=datetime.now)
         )
     except Exception:
-        db.execute(
+        await db.execute(
             update(Report)
             .where(Report.id == report_id)
             .values(status=ReportStatus.FAIL.value, finished_at=datetime.now)

@@ -5,6 +5,7 @@ from app.db.models import Report, ReportStatus
 from app.db.session import SessionLocal
 
 
+# TODO: i think this have to be deleted to analise
 async def process_report_generation(report_id: int):
     db: AsyncSession = SessionLocal()
 

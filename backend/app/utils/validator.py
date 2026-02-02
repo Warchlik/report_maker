@@ -11,6 +11,7 @@ import bcrypt
 from app.db.models import User
 from app.db.session import db
 
+# TODO: change location for variables in to .env and .env.example
 SECRET_KEY = "HpoPSC9U2JlHlX5kxTcWgKpeysVYAEjGmhk2IxcDa4q"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_TIME = 30

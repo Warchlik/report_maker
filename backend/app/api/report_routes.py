@@ -1,33 +1,36 @@
 from datetime import datetime
 from typing import Any, Optional
-from fastapi import APIRouter, Depends, File, HTTPException, Header, UploadFile, status
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    File,
+    HTTPException,
+    UploadFile,
+    status,
+)
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import Session
 
-from app.db.models import Report, ReportStatus
+from app.db.models import Report, ReportStatus, User
 from app.db.session import db
+from app.utils.csv_validator import generate_report
 from app.utils.helper import save_file
+from app.utils.validator import current_user_cookie
 
 
 reports = APIRouter()
 
 
-async def _request_client_id(x_client_id: str | None) -> str:
-    if not x_client_id:
-        raise HTTPException(status_code=400, detail="None value in client_id")
-    if len(x_client_id) > 64:
-        raise HTTPException(status_code=400, detail="Invalid lenght for client_id")
-    return x_client_id
-
-
 @reports.post("/reports/upload")
 async def upload_job(
+    background_task: BackgroundTasks,
     file: UploadFile = File(...),
-    x_client_id: str | None = Header(default=None, alias="X-Client-Id"),
-    db: Session = Depends(db),
+    user: Optional[User] = Depends(current_user_cookie),
+    db: AsyncSession = Depends(db),
 ) -> dict[str, Any]:
-    owner_key: str = await _request_client_id(x_client_id)
+    if not user:
+        raise HTTPException(status_code=400, detail="User not found")
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     input_filename = f"{timestamp}_input.csv"
@@ -41,36 +44,37 @@ async def upload_job(
             status_code=400, detail="Csv has no enought data to create report"
         )
 
-    del content
+    # del content
 
-    is_file_save = save_file(owner_key, file, input_filename)
+    is_file_save = save_file(user.id, file, input_filename)
     if not is_file_save:
         raise HTTPException(status_code=400, detail="Error witch procesing file")
 
     report = Report(input_filename=input_filename, status=ReportStatus.ASSIGNED.value)
     try:
         db.add(report)
-        db.commit()
-        db.refresh(report)
+        await db.commit()
+        await db.refresh(report)
     except Exception:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST)
 
-    # TODO: -> add calary or background task | background task would by better in my situation
+    # TODO: finish background functionality to generate pdf
+    background_task.add_task(generate_report, user.id, content)
 
-    return {"id": report.id, "filename": report.input_filename, "owner_key": owner_key}
+    return {"id": report.id, "filename": report.input_filename, "user_id": user.id}
 
 
 @reports.get("/reports")
 async def list_jobs(
-    x_client_id: str | None = Header(default=None, alias="X-Client-Id"),
+    user: Optional[User] = Depends(current_user_cookie),
     db: AsyncSession = Depends(db),
 ) -> list[dict[str, Any]]:
-    owner_key = await _request_client_id(x_client_id)
-
+    if not user:
+        raise HTTPException(status_code=400, detail="User not found")
     reports = (
         await db.scalars(
             select(Report)
-            .where(Report.user_id == owner_key)
+            .where(Report.user_id == user.id)
             .order_by(Report.created_at.desc())
         )
     ).all()
@@ -90,14 +94,14 @@ async def list_jobs(
 @reports.get("/report/{report_id}")
 async def get_report(
     report_id: int,
-    x_client_id: str | None = Header(default=None, alias="X-Client-Id"),
+    user: Optional[User] = Depends(current_user_cookie),
     db: AsyncSession = Depends(db),
 ):
-    owner_key = await _request_client_id(x_client_id)
-
+    if not user:
+        raise HTTPException(status_code=400, detail="User not found")
     report: Optional[Report] = (
         await db.scalars(
-            select(Report).where(Report.id == report_id, Report.user_id == owner_key)
+            select(Report).where(Report.id == report_id, Report.user_id == user.id)
         )
     ).one_or_none()
 

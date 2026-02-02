@@ -6,7 +6,7 @@ from app.core.config import REPORTS_DIR
 
 
 def save_file(
-    owner_id: str, input_file: UploadFile, filename_to_save: str
+    owner_id: int, input_file: UploadFile, filename_to_save: str
 ) -> bool | str | None:
     try:
         dir: Path = REPORTS_DIR / str(owner_id)

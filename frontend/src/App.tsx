@@ -1,36 +1,64 @@
-import { HashRouter, Outlet, Route, Routes } from "react-router-dom";
-import Sidebar from "./components/SideBar";
-import UploadPage from "./pages/UploadPage";
-import HistoryPage from "./pages/HisoryPage";
-import LoginPage from "./pages/LoginPage";
-import RegisterPage from "./pages/RegisterPage";
+import { SidebarProvider, SidebarTrigger } from "./components/ui/sidebar";
+import { BrowserRouter, Outlet, Route, Routes } from "react-router-dom";
+import { AppSidebar } from "./components/AppSideBar";
+import Upload from "./pages/Upload";
+
 
 const Layout = () => {
   return (
-    <div className="flex min-h-screen w-full bg-background text-foreground">
-      <Sidebar />
-      <main className="ml-[60px] min-h-screen w-full transition-all duration-300">
-        <Outlet />
-      </main>
-    </div>
-  );
-};
-
-// TODO: do poprawy wygląd oraz informacje, podpiąć endpointy po zrobieniu backendu
-export default function App() {
-  return (
     <>
-      <HashRouter>
-        <Routes>
-          <Route element={<Layout />}>
-            <Route path="/" element={<UploadPage />} />
-            <Route path="/history" element={<HistoryPage />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
-          </Route>
-        </Routes>
-      </HashRouter>
+      <SidebarProvider>
+        <AppSidebar />
+        <main className="w-full">
+          <SidebarTrigger className="ml-2 mt-2" />
+          <Outlet />
+        </main>
+      </SidebarProvider>
     </>
-  );
+  )
 }
 
+
+const PlaceHolder = () => {
+  return (
+    <>
+
+    </>
+  )
+}
+
+export default function App() {
+  // return <ComponentExample />;
+
+  return (
+    <>
+      <BrowserRouter>
+        <Routes>
+          <Route element={<Layout />}>
+            <Route path="/" element={<PlaceHolder />} />
+            <Route path="/upload" element={<Upload />} />
+          </Route>
+        </Routes>
+      </BrowserRouter>
+    </>
+  )
+}
+
+
+
+
+// The `tooltip` component has been added. Remember to wrap your app with the `TooltipProvider` component.
+//
+// ```tsx title="app/layout.tsx"
+// import { TooltipProvider } from "@/components/ui/tooltip"
+//
+// export default function RootLayout({ children }: { children: React.ReactNode }) {
+//   return (
+//     <html lang="en">
+//       <body>
+//         <TooltipProvider>{children}</TooltipProvider>
+//       </body>
+//     </html>
+//   )
+// }
+// ```

@@ -5,21 +5,15 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
-  SidebarGroupLabel,
   SidebarHeader,
-  SidebarMenuAction,
   SidebarRail,
 } from "@/components/ui/sidebar"
 import {
   BadgeCheck,
   Bell,
   ChevronsUpDown,
-  Folder,
   FolderClock,
-  Forward,
   LogOut,
-  MoreHorizontal,
-  Trash2,
   Upload,
 } from "lucide-react"
 import {

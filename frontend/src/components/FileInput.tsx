@@ -1,10 +1,6 @@
 import { useDropzone } from "react-dropzone"
 import { Upload } from "lucide-react"
 import { cn } from "@/lib/utils"
-import {
-  Card,
-  CardContent,
-} from "@/components/ui/card"
 import { useCallback } from "react"
 
 export function FileInput() {

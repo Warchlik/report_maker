@@ -11,7 +11,6 @@ from fastapi import (
 )
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.db.models import Report, ReportStatus, User
 from app.db.session import db
 from app.utils.csv_validator import generate_report
@@ -23,7 +22,7 @@ reports = APIRouter()
 
 
 @reports.post("/reports/upload")
-async def upload_job(
+async def upload(
     background_task: BackgroundTasks,
     file: UploadFile = File(...),
     user: Optional[User] = Depends(current_user_cookie),

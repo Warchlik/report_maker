@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+from typing import Any
 from fastapi import FastAPI
 
 from app.api.auth_routes import auth
@@ -23,3 +24,8 @@ app = FastAPI(lifespan=lifespan)
 
 app.include_router(reports, prefix="/v1")
 app.include_router(auth, prefix="/auth")
+
+
+@app.get("/")
+async def root() -> dict[str, Any]:
+    return {"status": 200}

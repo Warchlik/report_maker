@@ -67,6 +67,7 @@ async def login(
     login_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid login credentials"
     )
+
     if not form.password or not form.username:
         raise login_exception
 

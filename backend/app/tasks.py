@@ -5,7 +5,7 @@ from app.db.models import Report, ReportStatus
 from app.db.session import SessionLocal
 
 
-# TODO: i think this have to be deleted to analise
+# TODO: -> i think this have to be deleted to analise
 async def process_report_generation(report_id: int):
     db: AsyncSession = SessionLocal()
 
@@ -20,7 +20,7 @@ async def process_report_generation(report_id: int):
         report.status = ReportStatus.PENDING.value
         await db.commit()
 
-        # todo -> wywołanie funkjci do robienia raportu
+        # TODO: -> wywołanie funkjci do robienia raportu
 
         await db.execute(
             update(Report)
